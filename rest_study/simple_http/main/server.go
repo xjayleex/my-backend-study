@@ -28,7 +28,11 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	// Handle req,
 	if r.URL.Path == "/2nd" {
 		log.Println("Handling 2nd")
-		w.Write([]byte("Hello Again!"))
+		w.Write([]byte("Hello Again!(2nd)"))
+		return
+	} else {
+		log.Println("Handling Default")
+		w.Write([]byte("Hello Again!(Default)"))
 		return
 	}
 	log.Println("Handling 1st")
