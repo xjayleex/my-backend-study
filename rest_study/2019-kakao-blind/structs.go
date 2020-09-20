@@ -13,6 +13,14 @@ type Call struct {
 	Start int
 	End int
 }
+type OnCalls struct {
+	Token string
+	Timestamp int
+	Elevators []Elevator
+	Calls []Call
+	IsEnd bool `json : "is_end"`
+
+}
 
 type Start struct {
 	Token string
