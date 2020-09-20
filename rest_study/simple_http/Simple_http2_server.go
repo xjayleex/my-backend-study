@@ -3,9 +3,10 @@ package main
 import (
 	"log"
 	"net/http"
+	"github.com/gorilla/mux"
 )
-func Main() {
-	srv := &http.Server{Addr: ":8000", Handler: http.HandlerFunc(handle)}
+func main() {
+	srv := &http.Server{Addr: ":8888", Handler: http.HandlerFunc(handle)}
 
 	// Start the server with TLS, since we are running
 	// HTTP/2 it must be run with TLS.
@@ -13,6 +14,7 @@ func Main() {
 	log.Printf("Serving on https://0.0.0.0:8000")
 	log.Fatal(srv.ListenAndServeTLS("/Users/ijaehyeon/Documents/tls/server.crt",
 		"/Users/ijaehyeon/Documents/tls/server.key"))
+
 	//log.Fatal(srv.ListenAndServe())
 }
 
@@ -26,6 +28,7 @@ func default_handle(w http.ResponseWriter, r *http.Request) {
 func handle(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Got connection: %s", r.Proto)
 	// Handle req,
+
 	if r.URL.Path == "/2nd" {
 		log.Println("Handling 2nd")
 		w.Write([]byte("Hello Again!(2nd)"))
