@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -44,13 +45,15 @@ func (c *Client) ReqStartAPI(user_key string, problem_id int, number_of_elevator
 		panic(err)
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(string(respBody))
 	if err := json.Unmarshal(respBody, c.St) ; err != nil {
 		panic(err)
 	}
+	fmt.Println("Requested Start API ... / Status -> " + resp.Status)
+
 }
 
 func (c *Client) ReqOnCallAPI (){
@@ -63,17 +66,52 @@ func (c *Client) ReqOnCallAPI (){
 		panic(err)
 	}
 	respBody, err := ioutil.ReadAll(resp.Body)
+	fmt.Println(string(respBody))
 	if err != nil {
 		panic(err)
 	}
 	if err := json.Unmarshal(respBody, c.OnCall) ; err != nil {
 		panic(err)
 	}
-	fmt.Println(string(respBody))
-
+	fmt.Println("Requested Oncall ... / Status -> " + resp.Status)
 }
-func main() {
-	c := NewClient(&http.Client{})
-	c.ReqStartAPI("tester",0,4)
-	c.ReqOnCallAPI()
+
+func (c *Client) ActionAPI (cmd *Commands) {
+	result := &ActionResult{}
+	url := *c.BaseURL + ":" + strconv.Itoa(*c.Port) + "/" + "action"
+	b, err := json.Marshal(*cmd)
+	fmt.Println(*cmd)
+
+	if err != nil {
+		panic(err)
+	}
+	/*rCmd := &[]Command{}
+	json.Unmarshal(b, rCmd)
+	for _,r := range *rCmd {
+		fmt.Println("" +r.Command + " " + strconv.Itoa(r.ElevatorID))
+	}*/
+	fmt.Println(string(b))
+	buf := bytes.NewBuffer(b)
+	if err != nil {
+		panic(err)
+	}
+
+	nReq, _ := http.NewRequest("POST", url, buf)
+	nReq.Header.Add("X-Auth-Token",c.St.Token)
+	nReq.Header.Add("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(nReq)
+	defer resp.Body.Close()
+	fmt.Println(resp.Status)
+	if err != nil {
+		panic(err)
+	}
+	respBody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		panic(err)
+	}
+	if err := json.Unmarshal(respBody, result) ; err != nil {
+		panic(err)
+	}
+	fmt.Println("Requested Action ... / Status -> " + resp.Status)
 }
