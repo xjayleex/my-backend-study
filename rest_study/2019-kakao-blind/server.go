@@ -85,12 +85,7 @@ func (c *Client) ActionAPI (cmd *Commands) {
 	if err != nil {
 		panic(err)
 	}
-	/*rCmd := &[]Command{}
-	json.Unmarshal(b, rCmd)
-	for _,r := range *rCmd {
-		fmt.Println("" +r.Command + " " + strconv.Itoa(r.ElevatorID))
-	}*/
-	fmt.Println(string(b))
+
 	buf := bytes.NewBuffer(b)
 	if err != nil {
 		panic(err)
