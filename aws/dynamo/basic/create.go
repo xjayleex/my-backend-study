@@ -42,7 +42,7 @@ func main(){
 			ReadCapacityUnits:  aws.Int64(10),
 			WriteCapacityUnits: aws.Int64(10),
 		},*/
-		TableName: aws.String("testtab"),
+		TableName: aws.String(TableName),
 	}
 	_, err := svc.CreateTable(input)
 	if err != nil {
