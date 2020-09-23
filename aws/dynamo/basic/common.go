@@ -2,7 +2,8 @@ package main
 
 const (
 	TableName = "testtab"
-)
+
+	)
 
 type Item struct {
 	Year int
