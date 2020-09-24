@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"github.com/gorilla/mux"
 )
 func main() {
 	srv := &http.Server{Addr: ":8888", Handler: http.HandlerFunc(handle)}
