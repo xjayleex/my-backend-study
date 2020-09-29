@@ -1,4 +1,4 @@
-package main
+package service
 
 
 import (
@@ -61,7 +61,7 @@ func (s *GrpcServer) Listen() (err error) {
 
 		if ErrExists(err) {
 			err = errors.Wrapf(err,
-				"failed to create tls grpc server using cert %s and key %s",
+				"failed to create tls service server using cert %s and key %s",
 				s.cert, s.key)
 			return
 		}
@@ -72,7 +72,7 @@ func (s *GrpcServer) Listen() (err error) {
 
 	err = s.server.Serve(listener)
 	if ErrExists(err) {
-		err = errors.Wrapf(err, "errored listening for grpc connections.")
+		err = errors.Wrapf(err, "errored listening for service connections.")
 		return
 	}
 	return
