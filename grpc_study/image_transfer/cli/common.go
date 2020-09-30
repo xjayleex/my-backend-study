@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func Trap(err error) {
+func trap(err error) {
 	if err == nil {
 		return
 	}

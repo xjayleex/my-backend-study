@@ -1,9 +1,7 @@
 package cli
 
 import (
-	"fmt"
 	clitool "gopkg.in/urfave/cli.v2"
-	"os"
 	"github.com/xjayleex/my-backend-study/grpc_study/image_transfer/service"
 )
 
@@ -44,10 +42,10 @@ func serveAction(c *clitool.Context) (err error) {
 		Certificate: cert,
 		Key: key,
 	})
-	Trap(err)
+	trap(err)
 	server = &grpcServer
 	err = server.Listen()
-	Trap(err)
+	trap(err)
 	defer server.Close()
 
 	return

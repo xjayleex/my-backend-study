@@ -2,10 +2,10 @@ package cli
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
+	"errors"
 	"github.com/xjayleex/my-backend-study/grpc_study/image_transfer/service"
+	"golang.org/x/net/context"
 	clitool "gopkg.in/urfave/cli.v2"
-	"os"
 )
 
 var Send = clitool.Command{
@@ -53,7 +53,27 @@ func sendAction(c *clitool.Context) (err error) {
 	)
 
 	if address == "" {
-		Trap(errors.New("Address required."))
+		trap(errors.New("Address required"))
 	}
+
+	if file == "" {
+		trap(errors.New("file path required"))
+	}
+
+	grpcClient, err := service.NewGprcClient(service.GrpcClientConfig{
+		Address: 			address,
+		RootCertificate: 	rootCertificate,
+		Compress: 			compress,
+		ChunkSize: 			chunkSize,
+	})
+	trap(err)
+	client = &grpcClient
+
+	stat, err := client.TransferImageFile(context.Background(), file)
+	trap(err)
+	defer client.Close()
+
+	fmt.Printf("%d\n", stat.EndTimeStamp.Sub(stat.StartTimeStamp).Nanoseconds())
+	return
 }
 
