@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"io"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -61,6 +62,8 @@ func (s *GrpcServer) Listen() (err error) {
 		return
 	}
 
+	grpcOpts = append(grpcOpts, grpc.StreamInterceptor(streamInterceptor))
+
 	if s.cert != "" && s.key != "" {
 		grpcCreds, err = credentials.NewServerTLSFromFile(s.cert, s.key)
 
@@ -81,6 +84,16 @@ func (s *GrpcServer) Listen() (err error) {
 		return
 	}
 	return
+}
+
+func streamInterceptor (
+	srv interface{},
+	stream grpc.ServerStream,
+	info *grpc.StreamServerInfo,
+	handler grpc.StreamHandler) error {
+	log.Println("--> stream interceptor : ", info.FullMethod)
+	fmt.Println("--> stream intercepted.")
+	return handler(srv, stream)
 }
 
 func (s *GrpcServer) SendImage(stream messaging.ImageTransfer_SendImageServer) (err error) {
