@@ -88,6 +88,7 @@ func (c *GrpcClient) TransferImageFile(ctx context.Context, path string) (stats 
 	)
 
 	file, err = os.Open(path)
+
 	if err != nil {
 		err = errors.Wrapf(err, "failed opening file %s", path)
 		return
