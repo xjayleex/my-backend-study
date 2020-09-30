@@ -2,6 +2,8 @@ package service
 
 
 import (
+	"bufio"
+	"fmt"
 	"github.com/pkg/errors"
 	messaging "github.com/xjayleex/idl/protos/imageproto"
 	"github.com/rs/zerolog"
@@ -19,12 +21,15 @@ type GrpcServer struct {
 	port		int
 	cert		string
 	key			string
+	counter 	int
+	storage		string
 }
 
 type GrpcServerConfig struct {
 	Certificate string
 	Key			string
 	Port		int
+	Storage  	string
 }
 
 func NewGrpcServer(cfg GrpcServerConfig) (s GrpcServer, err error) {
@@ -39,7 +44,7 @@ func NewGrpcServer(cfg GrpcServerConfig) (s GrpcServer, err error) {
 	s.port = cfg.Port
 	s.cert = cfg.Certificate
 	s.key = cfg.Key
-
+	s.storage = cfg.Storage
 	return
 }
 
@@ -79,19 +84,32 @@ func (s *GrpcServer) Listen() (err error) {
 }
 
 func (s *GrpcServer) SendImage(stream messaging.ImageTransfer_SendImageServer) (err error) {
+	f, err := os.Create(s.storage + "/" + strconv.Itoa(s.counter) + ".jpeg")
+	ErrExists(err)
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	var nn, n int
+
 	for {
-		_, err = stream.Recv()
+		b, err := stream.Recv()
 		if ErrExists(err) {
 			if err == io.EOF {
 				goto END
 			}
 			err = errors.Wrapf(err,
-				"failed unexpectadely while reading chunks from stream")
+				"failed unexpectedly while reading chunks from stream")
 			return
 		}
+
+		nn, err = w.Write(b.GetContent())
+		ErrExists(err)
+		n += nn
 	}
-	s.logger.Info().Msg("Data received.")
 END:
+	s.logger.Info().Msg("Data received.")
+	w.Flush()
+	fmt.Printf("Wrote file in byte %d\n",n)
+
 	err = stream.SendAndClose(&messaging.TransferStatus{
 		Message: "Image Transfer received with success.",
 		StatusCode: messaging.TransStatCode_Ok,

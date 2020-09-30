@@ -27,6 +27,11 @@ var Serve = clitool.Command{
 			Name: "key",
 			Usage: "path to key file.",
 		},
+		&clitool.StringFlag{
+			Name: "storage",
+			Value: "/home/jayhadoop/storage",
+			Usage: "Storage path for save images on server",
+		},
 	},
 }
 
@@ -35,12 +40,14 @@ func serveAction(c *clitool.Context) (err error) {
 		port		= c.Int("port")
 		key			= c.String("key")
 		cert		= c.String("certificate")
+		storage 	= c.String("storage")
 		server		service.Server
 	)
 	grpcServer, err := service.NewGrpcServer(service.GrpcServerConfig{
 		Port: port,
 		Certificate: cert,
 		Key: key,
+		Storage: storage,
 	})
 	trap(err)
 	server = &grpcServer
