@@ -89,9 +89,9 @@ func (s *GrpcServer) SendImage(stream messaging.ImageTransfer_SendImageServer) (
 	defer f.Close()
 	w := bufio.NewWriter(f)
 	var nn, n int
-
+	var b *messaging.Chunk
 	for {
-		b, err := stream.Recv()
+		b, err = stream.Recv()
 		if ErrExists(err) {
 			if err == io.EOF {
 				goto END
@@ -107,7 +107,10 @@ func (s *GrpcServer) SendImage(stream messaging.ImageTransfer_SendImageServer) (
 	}
 END:
 	s.logger.Info().Msg("Data received.")
-	w.Flush()
+	err = w.Flush()
+	if err != nil {
+		fmt.Println("Faild on Flush.")
+	}
 	fmt.Printf("Wrote file in byte %d\n",n)
 
 	err = stream.SendAndClose(&messaging.TransferStatus{
