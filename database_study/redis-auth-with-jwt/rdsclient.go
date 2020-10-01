@@ -41,6 +41,10 @@ func (rv *RValue) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data,rv)
 }
 
+func (rv *RValue) String() string {
+	return fmt.Sprintf("%s %s",rv.Password,rv.Mail)
+}
+
 type RedisClientOpts struct {
 	Address	string
 	Port	string
@@ -91,6 +95,17 @@ func (rc *RedisClient) Get(key string) error {
 	return nil
 }
 
+func (rc *RedisClient) GetBytes(key string) (*RValue,error) {
+	val, err := rc.client.Get(rc.ctx, key).Bytes()
+	if err != nil {
+		fmt.Println("Key doesn't exist.")
+		return nil ,err
+	}
+	rv := &RValue{}
+	json.Unmarshal(val,rv)
+	return rv, nil
+}
+
 func main() {
 	rc, err := NewRedisClient(&RedisClientOpts{
 		Address: "localhost",
@@ -107,6 +122,9 @@ func main() {
 	rc.SetNX(&RData{"users:jaehyunlee",
 		&RValue{"password", "bigdata304@gmail.com" }})
 	rc.Get("users:jaehyunlee")
+	rv, err := rc.GetBytes("users:jaehyunlee")
+	trap(err)
+	fmt.Println(rv.String())
 
 }
 
