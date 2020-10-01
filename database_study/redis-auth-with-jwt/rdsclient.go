@@ -21,15 +21,24 @@ type RData struct {
 }
 
 type RValue struct {
-	Password string
-	Mail	string
+	Password string	`json:"password"`
+	Mail	string `json:"mail"`
 }
 
 func (rd *RData) MarshalBinary() ([]byte, error) {
 	return json.Marshal(rd)
 }
+
+func (rd *RData) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data,rd)
+}
+
 func (rv *RValue) MarshalBinary() ([]byte, error) {
 	return json.Marshal(rv)
+}
+
+func (rv *RValue) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data,rv)
 }
 
 type RedisClientOpts struct {
@@ -61,7 +70,7 @@ func NewRedisClient(opts *RedisClientOpts) (c *RedisClient, err error) {
 }
 
 
-func (rc *RedisClient) Setnx(data *RData) {
+func (rc *RedisClient) SetNX(data *RData) {
 	boolCmd := rc.client.SetNX(rc.ctx, data.Key, data.Value,0)
 	flag , err := boolCmd.Result()
 	trap(err)
@@ -70,9 +79,17 @@ func (rc *RedisClient) Setnx(data *RData) {
 	} else {
 		fmt.Println("Success on creating key.")
 	}
-
 }
 
+func (rc *RedisClient) Get(key string) error {
+	val, err := rc.client.Get(rc.ctx, key).Result()
+	if err != nil {
+		fmt.Println("Key doesn't exist.")
+		return err
+	}
+	fmt.Println(val)
+	return nil
+}
 
 func main() {
 	rc, err := NewRedisClient(&RedisClientOpts{
@@ -87,8 +104,10 @@ func main() {
 		fmt.Println("Not Connected.")
 		os.Exit(1)
 	}
-	rc.Setnx(&RData{"users:jaehyunlee",
+	rc.SetNX(&RData{"users:jaehyunlee",
 		&RValue{"password", "bigdata304@gmail.com" }})
+	rc.Get("users:jaehyunlee")
+
 }
 
 func trap (err error) {
