@@ -1,14 +1,10 @@
-package main
+package example
 import (
 	"fmt"
 	"github.com/Shopify/sarama"
 )
-type Producer struct {
-	sProducer  sarama.SyncProducer
-	asProducer sarama.AsyncProducer
-}
 
-func main() {
+func simple_sync_producer() {
 	config :=  sarama.NewConfig()
 	config.Producer.Partitioner =
 		sarama.NewRoundRobinPartitioner
@@ -31,4 +27,5 @@ func main() {
 		panic(err)
 	}
 	fmt.Printf("%d/%d\n", part, offset)
+
 }
