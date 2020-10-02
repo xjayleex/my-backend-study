@@ -5,8 +5,9 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/pkg/errors"
-	messaging "github.com/xjayleex/idl/protos/imageproto"
 	"github.com/rs/zerolog"
+	messaging "github.com/xjayleex/idl/protos/imageproto"
+	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"sync"
 )
 
 type GrpcServer struct {
@@ -24,6 +26,7 @@ type GrpcServer struct {
 	key			string
 	counter 	int
 	storage		string
+
 }
 
 type GrpcServerConfig struct {
@@ -31,6 +34,11 @@ type GrpcServerConfig struct {
 	Key			string
 	Port		int
 	Storage  	string
+}
+
+type InMemoryUserStore struct {
+	mutex sync.RWMutex
+	users map[string]string
 }
 
 func NewGrpcServer(cfg GrpcServerConfig) (s GrpcServer, err error) {
@@ -92,8 +100,17 @@ func streamInterceptor (
 	info *grpc.StreamServerInfo,
 	handler grpc.StreamHandler) error {
 	log.Println("--> stream interceptor : ", info.FullMethod)
-	fmt.Println("--> stream intercepted.")
 	return handler(srv, stream)
+}
+
+func(s *GrpcServer) SignUp(ctx context.Context, info *messaging.Sign) (*messaging.TransferStatus, error) {
+	if !IsValid() {
+		return nil, errors.New("Invalid username or password.")
+	}
+}
+
+func IsValid() (flag bool){
+	return true
 }
 
 func (s *GrpcServer) SendImage(stream messaging.ImageTransfer_SendImageServer) (err error) {
