@@ -72,6 +72,8 @@ func (store *RedisUserStore) Save (user *User ) error {
 	// err == nil -> save 불가능
 	if err != nil && errors.Is(err, ErrKeyNotExists){
 
+	} else { // error doesnt exist || error is not keynotexist err
+
 	}
 
 }
