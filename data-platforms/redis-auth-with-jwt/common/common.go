@@ -70,8 +70,8 @@ func (store *RedisUserStore) Save (user *User ) error {
 	cmd, err := store.userInRedis.Get(user.Username)
 	// err != nil -> key does not exist -> save 가능
 	// err == nil -> save 불가능
-	if err != nil {
-		fmt.Println(err)
+	if err != nil && errors.Is(err, ErrKeyNotExists){
+
 	}
 
 }
