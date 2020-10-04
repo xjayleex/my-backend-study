@@ -1,4 +1,4 @@
-package common
+package main
 
 import (
 	"context"
@@ -18,7 +18,7 @@ type RedisClient struct {
 
 type RData struct {
 	Key string
-	Value *RValue
+	Value interface{}
 }
 
 type RValue struct {
@@ -34,13 +34,6 @@ func (rd *RData) UnmarshalBinary(data []byte) error {
 	return json.Unmarshal(data,rd)
 }
 
-func (rv *RValue) MarshalBinary() ([]byte, error) {
-	return json.Marshal(rv)
-}
-
-func (rv *RValue) UnmarshalBinary(data []byte) error {
-	return json.Unmarshal(data,rv)
-}
 
 func (rv *RValue) String() string {
 	return fmt.Sprintf("%s %s",rv.Password,rv.Mail)
@@ -78,26 +71,30 @@ func NewRedisClient(opts *RedisClientOpts) (c *RedisClient) {
 }
 
 
-func (rc *RedisClient) SetNX(data *RData) {
+func (rc *RedisClient) SetNX(data *RData) error {
+	if err := rc.Ping() ; err != nil {
+		return ErrNotConnected
+	}
 	boolCmd := rc.client.SetNX(rc.ctx, data.Key, data.Value,0)
 	flag , err := boolCmd.Result()
-	trap(err)
+	if err != nil {
+		return err
+	}
 	if !flag {
-		fmt.Println("Key Exists Already.")
+		return ErrKeyExistsAlready
 	} else {
-		fmt.Println("Success on creating key.")
+		return nil
 	}
 }
 
 func (rc *RedisClient) Get(key string) (*redis.StringCmd, error) {
 	if err := rc.Ping() ; err != nil {
-		return nil, err
+		return nil, ErrNotConnected
 	}
 	cmd := rc.client.Get(rc.ctx, key)
-	_, err := cmd.Result()
-	if err != nil {
-		err = errors.Errorf("Key Not exist.")
-		return nil, err
+
+	if _, err := cmd.Result(); err != nil {
+		return nil, ErrKeyNotExists
 	}
 	return cmd, nil
 }

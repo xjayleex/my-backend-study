@@ -1,25 +1,37 @@
-package common
+package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 	"os"
 	"sync"
 )
-
 var (
 	ErrKeyNotExists = errors.New("Key Not exist.")
+	ErrKeyExistsAlready = errors.New("Key exists already.")
 	ErrNotConnected = errors.New("Not Connected.")
 	ErrNilContext = errors.New("Context is nil value.")
 	ErrNoAddress = errors.New("Address Required.")
 	ErrNoPort = errors.New("Port Required.")
+	ErrUnknown = errors.New("Unknown error occurs")
 )
+
 
 type User struct {
 	Username			string
 	HashedPassword		string
 	Mail				string
+}
+
+
+func (u *User) MarshalBinary() ([]byte, error) {
+	return json.Marshal(u)
+}
+
+func (u *User) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, u)
 }
 
 func NewUser(username string, password string) (*User, error) {
@@ -41,7 +53,7 @@ func (user *User) IsCorrectPassword(password string) bool {
 }
 
 type UserStore interface {
-	Save(user *User)
+	SignUp(user *User) error
 	Find(username string) (*User, error)
 }
 
@@ -61,19 +73,31 @@ func NewRedisUserStore(opts *RedisClientOpts) *RedisUserStore {
 }
 
 func (store *RedisUserStore) Find (username string) (*User, error ) {
+	return nil, nil
 }
 
 
-func (store *RedisUserStore) Save (user *User ) error {
+func (store *RedisUserStore) SignUp (user *User ) error {
 	store.mutex.Lock()
 	defer store.mutex.Unlock()
-	cmd, err := store.userInRedis.Get(user.Username)
-	// err != nil -> key does not exist -> save 가능
-	// err == nil -> save 불가능
-	if err != nil && errors.Is(err, ErrKeyNotExists){
+	err := store.userInRedis.SetNX(&RData{
+		Key:   user.Username,
+		Value: user,
+	})
+	return err
+}
 
-	} else { // error doesnt exist || error is not keynotexist err
+func main() {
+	rs := NewRedisUserStore(&RedisClientOpts{
+		Address: "localhost",
+		Port:    "6379",
+		DB:      1,
+	})
 
-	}
-
+	err := rs.SignUp(&User{
+		Username:       "jay1",
+		HashedPassword: "1234",
+		Mail:           "bigdata304@gmail.com",
+	})
+	fmt.Println(err)
 }
