@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	pb "github.com/xjayleex/idl/protos/auth"
 	"golang.org/x/net/context"
 )
@@ -43,8 +44,16 @@ func (authServer *AuthServer) SignIn (ctx context.Context, req *pb.SignInRequest
 	if err != nil {
 		return nil, err
 	}
-	if user == nil || !user.IsCorrectPassword(req.GetPassword()) {
+	if user == nil {
+		return nil, errors.New("Nil user.")
+	} else if !user.IsCorrectPassword(req.GetPassword()) {
 		return nil, ErrIncorrectInfo
 	}
-	token, err := authServer.jwtManager.Generate()
+	token, err := authServer.jwtManager.Generate(user)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &pb.SignInResponse{AccessToken: token}
+	return res, nil
 }

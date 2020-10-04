@@ -27,14 +27,14 @@ var (
 )
 
 const (
-	userStoreDB 	= 1
-	tokenStoreDB	= 2
+	UserStoreDB 	= 1
+	TokenStoreDB	= 2
 )
 
 type User struct {
-	Mail				string
-	Username			string
-	HashedPassword		string
+	Mail				string	`json:"mail"`
+	Username			string	`json:"username"`
+	HashedPassword		string	`json:"password"`
 }
 
 
@@ -62,6 +62,7 @@ func NewUser(mail string, username string, password string) (*User, error) {
 
 func (u *User) IsCorrectPassword(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.HashedPassword), []byte(password))
+
 	return err == nil
 }
 
@@ -88,14 +89,20 @@ func NewRedisUserStore(opts *RedisClientOpts) *RedisUserStore {
 func (store *RedisUserStore) Find (mail string) (*User, error ) {
 	store.mutex.RLock()
 	defer store.mutex.RUnlock()
-	user, err := store.userInRedis.Get(mail)
+	cmd, err := store.userInRedis.Get(mail)
 	if err != nil {
 		return nil, err
 	}
-	if user == nil {
+	if cmd == nil {
 		return nil, ErrNilUserObject
 	}
-	return nil, nil
+	val, err := cmd.Bytes()
+	if err != nil {
+		return nil, errors.New("Marshal/Unmarshal Error")
+	}
+	user := &User{}
+	err = json.Unmarshal(val,user)
+	return user, err
 }
 
 
@@ -116,7 +123,7 @@ type JWTManager struct {
 
 type UserClaims struct {
 	jwt.StandardClaims
-	Username string `json:"username"`
+	Mail string `json:"mail"`
 }
 
 func NewJWTManager(secretKey string, tokenDuration time.Duration) *JWTManager{
@@ -128,7 +135,7 @@ func (manager *JWTManager) Generate(user *User) (string, error) {
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(manager.tokenDuration).Unix(),
 		},
-		Username: user.Username,
+		Mail: user.Mail,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,claims)
@@ -156,18 +163,3 @@ func (manager *JWTManager) Verify(accessToken string) (*UserClaims, error) {
 	}
 	return claims, nil
 }
-/*
-func main() {
-	rs := NewRedisUserStore(&RedisClientOpts{
-		Address: "localhost",
-		Port:    "6379",
-		DB:      userStoreDB,
-	})
-
-	err := rs.SignUp(&User{
-		Username:       "jay1",
-		HashedPassword: "1234",
-		Mail:           "bigdata304@gmail.com",
-	})
-	fmt.Println(err)
-}*/
