@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	pb "github.com/xjayleex/idl/protos/auth"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 
@@ -19,6 +20,8 @@ func NewAuthServer (userStore UserStore, jwtManager *JWTManager ) *AuthServer {
 		jwtManager: jwtManager,
 	}
 }
+
+
 
 func (authServer *AuthServer) SignUp (ctx context.Context, req *pb.SignUpRequest) (*pb.SignUpResponse, error)  {
 	if authServer == nil {
@@ -40,6 +43,7 @@ func (authServer *AuthServer) SignUp (ctx context.Context, req *pb.SignUpRequest
 }
 
 func (authServer *AuthServer) SignIn (ctx context.Context, req *pb.SignInRequest) (*pb.SignInResponse, error) {
+
 	user, err := authServer.userStore.Find(req.GetMail())
 	if err != nil {
 		return nil, err
@@ -53,7 +57,20 @@ func (authServer *AuthServer) SignIn (ctx context.Context, req *pb.SignInRequest
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("Gerated token to",req.Mail," ",token)
 	res := &pb.SignInResponse{AccessToken: token}
 	return res, nil
+}
+
+func (as *AuthServer)authServerInterceptor (ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	fmt.Println("It's unary server auth interceptor.")
+	r , ok := req.(*pb.SignInRequest)
+	if ok && as != nil {
+		_, err := as.jwtManager.Verify(r.AccessToken)
+		if err == nil {
+			return nil, errors.New("Token Not Expired , Yet")
+		}
+	}
+	h, err := handler(ctx, req)
+	return h, err
 }

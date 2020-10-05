@@ -9,6 +9,7 @@ import (
 	"time"
 	pb "github.com/xjayleex/idl/protos/auth"
 )
+
 func main() {
 	fmt.Println("Auth Server is Starting...")
 	var (
@@ -27,7 +28,10 @@ func main() {
 		Port:    "6379",
 		DB:	UserStoreDB,
 	})
-	authServer := NewAuthServer(rs, NewJWTManager("secret", 15 * time.Minute))
+	authServer := NewAuthServer(rs, NewJWTManager("secret", 1 * time.Minute))
+	if true {
+		grpcOpts = append(grpcOpts, grpc.UnaryInterceptor(authServer.authServerInterceptor))
+	}
 	authGrpcServer := grpc.NewServer(grpcOpts...)
 	pb.RegisterAuthServiceServer(authGrpcServer,authServer)
 	err = authGrpcServer.Serve(listener)

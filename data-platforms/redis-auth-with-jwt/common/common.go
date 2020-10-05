@@ -121,7 +121,7 @@ type JWTManager struct {
 	tokenDuration	time.Duration
 }
 
-type UserClaims struct {
+type UserClaims struct { // Sensitive한 정보는 토큰에 담지 말 것...
 	jwt.StandardClaims
 	Mail string `json:"mail"`
 }
