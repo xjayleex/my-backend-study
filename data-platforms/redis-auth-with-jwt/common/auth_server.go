@@ -6,6 +6,7 @@ import (
 	pb "github.com/xjayleex/idl/protos/auth"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"time"
 )
 
 
@@ -43,7 +44,8 @@ func (authServer *AuthServer) SignUp (ctx context.Context, req *pb.SignUpRequest
 }
 
 func (authServer *AuthServer) SignIn (ctx context.Context, req *pb.SignInRequest) (*pb.SignInResponse, error) {
-
+	fmt.Println(time.Now()," : Server Origin gRPC call")
+	time.Sleep(1000 * time.Millisecond)
 	user, err := authServer.userStore.Find(req.GetMail())
 	if err != nil {
 		return nil, err
@@ -63,7 +65,6 @@ func (authServer *AuthServer) SignIn (ctx context.Context, req *pb.SignInRequest
 }
 
 func (as *AuthServer)authServerInterceptor (ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	fmt.Println("It's unary server auth interceptor.")
 	r , ok := req.(*pb.SignInRequest)
 	if ok && as != nil {
 		_, err := as.jwtManager.Verify(r.AccessToken)
@@ -71,6 +72,9 @@ func (as *AuthServer)authServerInterceptor (ctx context.Context, req interface{}
 			return nil, errors.New("Token Not Expired , Yet")
 		}
 	}
+	fmt.Println(time.Now(), " : Server  gRPC Interceptor [Before Calling gRPC]")
 	h, err := handler(ctx, req)
+	fmt.Println(time.Now(), " : Server  gRPC Interceptor [After Calling origin gRPC]")
+
 	return h, err
 }

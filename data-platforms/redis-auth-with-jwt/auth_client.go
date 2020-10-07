@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"os"
+	"time"
 )
 
 type AuthClient struct {
@@ -71,8 +72,9 @@ func NewAuthClient(mail string, password string, accessToken string, cfg GrpcCli
 }
 
 func authClientInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-	fmt.Println("Its `authClientInterceptor.` method.")
+	fmt.Println(time.Now()," : Client Interceptor [After calling gRPC Server]" )
 	err := invoker(ctx, method, req, reply, cc, opts...)
+	fmt.Println(time.Now()," : Client Interceptor [Before get response from gRPC Server]" )
 	return err
 }
 
@@ -83,8 +85,10 @@ func (ac *AuthClient) SignIn(opts ...grpc.CallOption) (string, error) {
 		Password:    ac.password,
 		AccessToken: ac.accessToken,
 	}
-
+	fmt.Println(time.Now(), " : Client Origin gRPC call")
+	time.Sleep(1000 * time.Millisecond)
 	res, err := ac.client.SignIn(ctx, req, opts...)
+	fmt.Println(time.Now()," : Gotton Response" )
 	if err != nil {
 		return "", err
 	}
@@ -98,7 +102,8 @@ func (ac *AuthClient) Close() {
 }
 
 func main() {
-	 ac, err := NewAuthClient("jayleekau@gmail.com","start130625","eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDE4OTkyMTUsIm1haWwiOiJqYXlsZWVrYXVAZ21haWwuY29tIn0.yZ6EPKBb563CLrtwW9eR9jsObSDJsdso_5nxnDpnGo0",
+	 ac, err := NewAuthClient("jayleekau@gmail.com","somepassword",
+	 	"",
 	 	GrpcClientConfig{
 			Address:         "127.0.0.1:9090",
 			RootCertificate: "",

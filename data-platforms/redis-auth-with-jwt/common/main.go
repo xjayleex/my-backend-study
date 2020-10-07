@@ -31,6 +31,7 @@ func main() {
 	authServer := NewAuthServer(rs, NewJWTManager("secret", 1 * time.Minute))
 	if true {
 		grpcOpts = append(grpcOpts, grpc.UnaryInterceptor(authServer.authServerInterceptor))
+
 	}
 	authGrpcServer := grpc.NewServer(grpcOpts...)
 	pb.RegisterAuthServiceServer(authGrpcServer,authServer)
