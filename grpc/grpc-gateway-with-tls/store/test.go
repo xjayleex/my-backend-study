@@ -1,4 +1,4 @@
-package store
+package main
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ func main() {
 	//us := UserStore(rs)
 
 	us := UserStore(rs)
-
+	fmt.Println(us)
 	err = us.Save(NewUser("jaehyun","bigdata304@gmail.com"))
 	if err != nil {
 		fmt.Println(err)
