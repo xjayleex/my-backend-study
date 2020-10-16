@@ -1,4 +1,4 @@
-package main
+package store
 
 import (
 	"encoding/json"
@@ -6,7 +6,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
-func main() {
+func test() {
 	rs, err := NewRedisUserStore(&RedisClientOpts{
 		Address: "localhost",
 		Port:    "6379",
