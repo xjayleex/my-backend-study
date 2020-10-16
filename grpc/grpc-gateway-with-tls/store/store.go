@@ -1,4 +1,4 @@
-package store
+package main
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	EnrollmentDB = 1
+	EnrollmentDB = 2
 )
 
 type User struct {
@@ -68,7 +68,7 @@ func NewRedisUserStore (opts *RedisClientOpts) (*RedisStore, error) {
 	return rs, nil
 }
 
-func (rs RedisStore) Save (e interface{}) error {
+func (rs *RedisStore) Save (e interface{}) error {
 	user, ok := e.(*User)
 	if !ok {
 		return errors.New("Type mismatch error")
@@ -97,7 +97,7 @@ func (rs RedisStore) Save (e interface{}) error {
 	}
 }
 
-func (rs RedisStore) Find (key string) (interface{} ,error) {
+func (rs *RedisStore) Find (key string) (interface{} ,error) {
 	ctx := context.Background()
 	if err := rs.Ping(ctx); err != nil {
 		return nil, errors.New("Not connected to redis")
