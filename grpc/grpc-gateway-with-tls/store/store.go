@@ -9,8 +9,18 @@ import (
 	"sync"
 )
 
+type Code uint32
 const (
 	EnrollmentDB = 2
+)
+
+const (
+	ErrNoRedisServerAddress Code = 0 + iota
+	ErrNoRedisPort
+	ErrTypeAssertion
+	ErrNoConnWithRedis
+	ErrKeyNotExists
+	ErrInternal
 )
 
 type User struct {
@@ -39,7 +49,7 @@ type UserStore interface {
 }
 
 type RedisStore struct {
-	mtx		sync.RWMutex
+	mtx		*sync.RWMutex
 	cli		*redis.Client
 }
 
@@ -59,7 +69,7 @@ func NewRedisUserStore (opts *RedisClientOpts) (*RedisStore, error) {
 	}
 
 	rs := &RedisStore{
-		mtx: sync.RWMutex{},
+		mtx: &sync.RWMutex{},
 		cli: redis.NewClient(&redis.Options{
 			Addr: opts.Address + ":" + opts.Port,
 			DB: opts.DB,
