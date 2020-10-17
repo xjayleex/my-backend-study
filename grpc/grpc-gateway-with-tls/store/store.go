@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
-	"github.com/pkg/errors"
 	"sync"
 )
 
 type Code uint32
+
 const (
 	EnrollmentDB = 2
 )
@@ -20,8 +20,26 @@ const (
 	ErrTypeAssertion
 	ErrNoConnWithRedis
 	ErrKeyNotExists
+	ErrKeyExistsAlready
 	ErrInternal
 )
+
+type StoreError struct {
+	Code	Code
+	Msg		string
+}
+
+func (se *StoreError) Error() string {
+	return fmt.Sprintf("Code : %d Message : %s",se.Code,se.Msg)
+}
+
+func Error (c Code, msg string) *StoreError {
+	return &StoreError{
+		Code: c,
+		Msg:  msg,
+	}
+}
+
 
 type User struct {
 	Mail				string	`json:"mail"`
@@ -61,11 +79,11 @@ type RedisClientOpts struct {
 
 func NewRedisUserStore (opts *RedisClientOpts) (*RedisStore, error) {
 	if opts.Address == "" {
-		return nil, errors.New("Address Required.")
+		return nil, Error(ErrNoRedisServerAddress,"Address Required")
 	}
 
 	if opts.Port == "" {
-		return nil, errors.New("Port Required")
+		return nil, Error(ErrNoRedisPort, "Port Required")
 	}
 
 	rs := &RedisStore{
@@ -81,12 +99,12 @@ func NewRedisUserStore (opts *RedisClientOpts) (*RedisStore, error) {
 func (rs *RedisStore) Save (e interface{}) error {
 	user, ok := e.(*User)
 	if !ok {
-		return errors.New("Type mismatch error")
+		return Error(ErrTypeAssertion, "Type Assertion Error")
 	}
 	ctx := context.Background()
 	if err := rs.Ping(ctx); err != nil {
 		fmt.Println(err)
-		return errors.New("Not connected to redis")
+		return Error(ErrNoConnWithRedis, "Not Connected to redis")
 	}
 
 	rs.mtx.Lock()
@@ -101,7 +119,7 @@ func (rs *RedisStore) Save (e interface{}) error {
 	}
 
 	if !flag {
-		return errors.New("Mail addr is exists already")
+		return Error(ErrKeyExistsAlready, "Mail address exists already")
 	} else {
 		return nil
 	}
@@ -110,7 +128,7 @@ func (rs *RedisStore) Save (e interface{}) error {
 func (rs *RedisStore) Find (key string) (interface{} ,error) {
 	ctx := context.Background()
 	if err := rs.Ping(ctx); err != nil {
-		return nil, errors.New("Not connected to redis")
+		return nil, Error(ErrNoConnWithRedis,"Not connected to redis")
 	}
 
 	rs.mtx.RLock()
@@ -118,7 +136,7 @@ func (rs *RedisStore) Find (key string) (interface{} ,error) {
 	cmd := rs.cli.Get(ctx, key)
 
 	if _, err := cmd.Result(); err != nil {
-		return nil, errors.New("Key not exists")
+		return nil, Error(ErrKeyNotExists, "Key not exists")
 	}
 	return cmd, nil
 }
@@ -127,10 +145,10 @@ func (rs *RedisStore) Find (key string) (interface{} ,error) {
 func (rs *RedisStore) Ping(ctx context.Context) (err error) {
 	pong, err := rs.cli.Ping(ctx).Result()
 	if err != nil {
-		return errors.New("Not connected to Redis")
+		return Error(ErrNoConnWithRedis,"Not connected to redis")
 	}
 	if pong != "PONG" {
-		return errors.New("Internal Error")
+		return Error(ErrInternal, "Internal Error")
 	}
 	return nil
 }
