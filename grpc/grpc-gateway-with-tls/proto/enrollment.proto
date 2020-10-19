@@ -1,0 +1,42 @@
+
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+import "google/protobuf/wrappers.proto";
+package enroll;
+
+// The Enrollment service definition.
+service Enrollment {
+  // Get Enrollment info.
+  rpc CheckEnrollment (CheckEnrollmentRequest) returns (CommonResponseMsg) {
+    option (google.api.http) = {
+      get: "/v1/users/{name}/{mail}"
+      additional_bindings {
+        get: "/v1/users/check/{name}/{mail}"
+      }
+    };
+  }
+  // Send Enrollment request which mapped with POST req.
+  rpc Enroll (EnrollmentRequest) returns (CommonResponseMsg) {
+    option (google.api.http) = {
+      post: "/post"
+      body: "*"
+    };
+  }
+}
+
+// The request message containing the user's name and email addr.
+message CheckEnrollmentRequest {
+  string name = 1;
+  string mail = 2;
+}
+
+// The response message containing the Enrollment info.
+message CommonResponseMsg {
+  string message = 1;
+}
+
+message EnrollmentRequest {
+  string name = 1;
+  string mail = 2;
+}

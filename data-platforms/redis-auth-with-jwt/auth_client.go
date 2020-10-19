@@ -105,7 +105,7 @@ func main() {
 	 ac, err := NewAuthClient("jayleekau@gmail.com","somepassword",
 	 	"",
 	 	GrpcClientConfig{
-			Address:         "127.0.0.1:g9090",
+			Address:         "127.0.0.1:9090",
 			RootCertificate: "",
 			UsingClientInc:  true,
 		})

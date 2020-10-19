@@ -11,10 +11,6 @@ import (
 type Code uint32
 
 const (
-	EnrollmentDB = 2
-)
-
-const (
 	ErrNoRedisServerAddress Code = 0 + iota
 	ErrNoRedisPort
 	ErrTypeAssertion

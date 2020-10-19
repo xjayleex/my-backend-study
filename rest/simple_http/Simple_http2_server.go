@@ -5,14 +5,14 @@ import (
 	"net/http"
 )
 func main() {
-	srv := &http.Server{Addr: ":8888", Handler: http.HandlerFunc(handle)}
+	srv := &http.Server{Addr: ":10000", Handler: http.HandlerFunc(handle)}
 
 	// Start the server with TLS, since we are running
 	// HTTP/2 it must be run with TLS.
 	// Exactly how you would run an HTTP/1.1 server with TLS connection.
-	log.Printf("Serving on https://0.0.0.0:8000")
-	log.Fatal(srv.ListenAndServeTLS("/Users/ijaehyeon/Documents/tls/server.crt",
-		"/Users/ijaehyeon/Documents/tls/server.key"))
+	log.Printf("Serving on https://0.0.0.0:10000")
+	log.Fatal(srv.ListenAndServeTLS("/Users/ijaehyeon/keys/server.crt",
+		"/Users/ijaehyeon/keys/server.pem"))
 
 	//log.Fatal(srv.ListenAndServe())
 }

@@ -38,6 +38,26 @@ var (
 	interceptorLogger *logrus.Entry
 )
 
+type User struct {
+	Mail				string	`json:"mail"`
+	Username			string	`json:"name"`
+}
+
+func NewUser(username string, mail string) *User {
+	return &User {
+		Username: username,
+		Mail: mail,
+	}
+}
+
+func (u *User) MarshalBinary() ([]byte, error) {
+	return json.Marshal(u)
+}
+
+func (u *User) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, u)
+}
+
 func NewGrpcServer(serverCrt string, serverKey string, userStore store.UserStore , opts ...grpc.ServerOption) (*GrpcServer , error) {
 	if serverCrt == "" || serverKey == "" {
 		return nil, errors.New("Server certificate path needed.")
@@ -85,11 +105,16 @@ func (gs *GrpcServer) CheckEnrollment(ctx context.Context, req *pb.CheckEnrollme
 		return nil, status.Error(codes.Internal, "Marshal/Unmarshal error")
 	}
 
-	user := &store.User{}
+	user := &User{}
 	err = json.Unmarshal(unmarshaled, user)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Marshal/Unmarshal error")
 	}
+
+	if user.Username != req.Name {
+		return nil, status.Error(codes.NotFound, "No mathches with request")
+	}
+
 	result := &pb.CommonResponseMsg{
 		Message: req.Mail + " is verified.",
 	}
@@ -97,7 +122,7 @@ func (gs *GrpcServer) CheckEnrollment(ctx context.Context, req *pb.CheckEnrollme
 }
 
 func (gs *GrpcServer) Enroll(ctx context.Context, req *pb.EnrollmentRequest) (*pb.CommonResponseMsg, error) {
-	err := gs.userStore.Save(store.NewUser(req.Name,req.Mail))
+	err := gs.userStore.Save(req.Mail, NewUser(req.Name,req.Mail))
 	if err != nil {
 		se, _ := err.(*store.StoreError)
 		if se.Code == store.ErrKeyExistsAlready {
