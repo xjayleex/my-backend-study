@@ -2,7 +2,7 @@ package store
 
 import (
 	"context"
-	"encoding/json"
+
 	"fmt"
 	"github.com/go-redis/redis"
 	"sync"
@@ -40,25 +40,9 @@ func Error (c Code, msg string) *StoreError {
 	}
 }
 
-
-type User struct {
-	Mail				string	`json:"mail"`
-	Username			string	`json:"name"`
-}
-
-func NewUser(username string, mail string) *User {
-	return &User {
-		Username: username,
-		Mail: mail,
-	}
-}
-
-func (u *User) MarshalBinary() ([]byte, error) {
-	return json.Marshal(u)
-}
-
-func (u *User) UnmarshalBinary(data []byte) error {
-	return json.Unmarshal(data, u)
+type RedisValue interface {
+	MarshalBinary() ([]byte, error)
+	UnmarshalBinary(data[]byte) error
 }
 
 type UserStore interface {
@@ -96,11 +80,7 @@ func NewRedisUserStore (opts *RedisClientOpts) (*RedisStore, error) {
 	return rs, nil
 }
 
-func (rs *RedisStore) Save (e interface{}) error {
-	user, ok := e.(*User)
-	if !ok {
-		return Error(ErrTypeAssertion, "Type Assertion Error")
-	}
+func (rs *RedisStore) Save (key string, value RedisValue) error {
 	ctx := context.Background()
 	if err := rs.Ping(ctx); err != nil {
 		fmt.Println(err)
@@ -110,7 +90,7 @@ func (rs *RedisStore) Save (e interface{}) error {
 	rs.mtx.Lock()
 	defer rs.mtx.Unlock()
 
-	boolCmd := rs.cli.SetNX(ctx,user.Mail,user,0)
+	boolCmd := rs.cli.SetNX(ctx, key, value,0)
 
 	flag, err := boolCmd.Result()
 
@@ -119,7 +99,7 @@ func (rs *RedisStore) Save (e interface{}) error {
 	}
 
 	if !flag {
-		return Error(ErrKeyExistsAlready, "Mail address exists already")
+		return Error(ErrKeyExistsAlready, "Key exists already")
 	} else {
 		return nil
 	}
