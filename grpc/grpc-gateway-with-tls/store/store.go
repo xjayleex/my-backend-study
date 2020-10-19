@@ -46,7 +46,7 @@ type RedisValue interface {
 }
 
 type UserStore interface {
-	Save(e interface{}) error
+	Save(key string, value RedisValue) error
 	Find(key string) (interface{},error)
 }
 
