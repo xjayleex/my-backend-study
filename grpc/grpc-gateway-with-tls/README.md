@@ -9,15 +9,16 @@ update: 2020-10-12
 author: Jaehyun Lee
 ---
 > ### Contents
-[**Introduction**](#introduction)  
-[**Encoding**](#encoding)  
-[**Decoding**](#decoding)  
-[**Generic JSON with empty interface type**](#generic-json-with-empty-interface-type)  
-[**Decoding arbitrary data**](#decoding-arbitrary-data)  
-[**Reference Types**](#reference-types)  
-[**Streaming Encoders and Decoders**](#streaming-encoders-and-decoders)  
+[**gRPC Gateway Introduction**](#grpc-gateway-Introduction)  
+[**Installation**](#installation)  
+[**User Database**](#user-database)  
+[**.proto**](#.proto)  
+[**Code Generation**](#code-generation)  
+[**gRPC Server**](#grpc-server)  
+[**gRPC Gateway**](#grpc-gateway)  
+[**Client Request**](#client-request)  
 
-#### gRPC Gateway
+#### gRPC Gateway Introduction
 ---
 gRPC는 protobuf를 idl로써 사용해 통신에 필요한 데이터와 서비스를 정의하고, 정의된 idl에서 원하는 프로그래밍 언어의 클라이언트/서버 스텁 코드를 쉽게 생성 할 수 있도록 해준다. gRPC가 가져다주는 이점들이 있기는 하지만, 기존의 서비스에 쉽게 붙여질 수 없다면 문제가 될 것이다.  
 JSON 기반의 REST 서비스들이 gRPC 서비스의 API를 호출하기 위해서는`gRPC-gateway`를 고려해볼 수 있다. 
@@ -70,7 +71,7 @@ type UserStore interface {
 
 ```
 
-#### enrollment.proto
+#### .proto
 ---
 enrollment.proto를 정의한다. 기존 gRPC만 고려했을 때, 유저 등록 서비스는 다음과 같이 정의 할 수 있다.
 ```protobuf
@@ -288,7 +289,7 @@ func (u *User) UnmarshalBinary(data []byte) error {
 }
 ```
 
-#### gRPC-Gateway
+#### gRPC Gateway
 ---
 gRPC-Gateway 전체 코드는 [`gateway/gateway.go`](https://github.com/xjayleex/my-backend-study/blob/master/grpc/grpc-gateway-with-tls/gateway/gateway.go)을 참고.
 
@@ -341,12 +342,52 @@ func Serve(address string, opts ...runtime.ServeMuxOption) error {
 }
 ```
 
-#### Client Code
+#### Client Request
 ---
 gRPC 서버에서 http 응답을 받아내는 것이 목적이었으므로, gRPC 클라이언트는 구현할 필요가 없었다. 또한 http 클라이언트는 그냥 curl을 쓰자...
 
-##### GET 요청
+```bash
+# 서버 실행
+$ go run server/main.go
+$ go run gateway/gateway.go
+```
 
-##### POST 요청
+```bash
+$ curl -X GET --cacert ~/keys/server.crt https://localhost:8080/v1/users/foo/foo@mail.co.kr -i
+HTTP/2 404 
+content-type: application/json
+content-length: 62
+date: Tue, 20 Oct 2020 08:13:44 GMT
+
+{"error":"Mail Not Found","code":5,"message":"Mail Not Found"}
+```
+유저 정보를 아직 등록하지 않아서, 404 코드를 받았다. POST 메소드로 유저 정보를 등록해보자.
+
+```bash
+$ curl -i -X POST --cacert ~/keys/server.crt https://localhost:8080/post \
+> -H "Content-Type: application/json" \
+> -d '{"name":"foo", "mail":"foo@mail.co.kr"}'
+HTTP/2 200 
+content-type: application/json
+grpc-metadata-content-type: application/grpc
+content-length: 35
+date: Tue, 20 Oct 2020 08:18:37 GMT
+
+{"message":"Enrolled successfully"}
+```
+
+Redis 서버를 끄고 요청을 날려보면, 
+```bash
+curl -i -X POST --cacert ~/keys/server.crt https://localhost:8080/post \
+-H "Content-Type: application/json" \
+-d '{"name":"foo", "mail":"foo@mail.co.kr"}'
+HTTP/2 500 
+content-type: application/json
+content-length: 63
+date: Tue, 20 Oct 2020 08:29:38 GMT
+
+{"error":"Internal Error","code":13,"message":"Internal Error"}
+```
+예상대로 Internal Error 상태 코드를 받을 수 있다.
 
 

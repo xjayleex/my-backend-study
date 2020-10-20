@@ -86,7 +86,7 @@ func (gs *GrpcServer) CheckEnrollment(ctx context.Context, req *pb.CheckEnrollme
 	if err != nil {
 		se, _ := err.(*store.StoreError)
 		if se.Code == store.ErrNoConnWithRedis {
-			gs.logger.Fatal("No Connection with redis.")
+			gs.logger.Error("No Connection with redis.")
 			return nil, status.Error(codes.Internal, "Internal Error")
 		} else if se.Code == store.ErrKeyNotExists {
 			return nil, status.Error(codes.NotFound, "Mail Not Found")
@@ -128,7 +128,7 @@ func (gs *GrpcServer) Enroll(ctx context.Context, req *pb.EnrollmentRequest) (*p
 		if se.Code == store.ErrKeyExistsAlready {
 			return nil, status.Error(codes.AlreadyExists, "The mail is already enrolled.")
 		} else if se.Code == store.ErrNoConnWithRedis {
-			gs.logger.Fatal("No Connection with redis.")
+			gs.logger.Error("No Connection with redis.")
 			return nil, status.Error(codes.Internal, "Internal Error")
 		} else {
 			return nil, status.Error(codes.Internal, "Internal Error")
