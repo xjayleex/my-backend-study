@@ -24,7 +24,7 @@ gRPC는 protobuf를 idl로써 사용해 통신에 필요한 데이터와 서비�
 JSON 기반의 REST 서비스들이 gRPC 서비스의 API를 호출하기 위해서는`gRPC-gateway`를 고려해볼 수 있다. 
 gRPC-gateway는 protobuf에 정의된 서비스를 이용해, RESTful API 요청을 gRPC로 변환하는 Reverse Proxy이다. 이를 통해 gRPC 서버를 gRPC와 RESTful API 스타일로 동시에 제공 할 수 있다.
 
-![Image](/assets/images/grpc-gateway.png){:style="width: 90%; margin: 0 auto; display: block;"}
+![Image](grpc-gateway.png){:style="width: 90%; margin: 0 auto; display: block;"}
 [(*Figure from 'github::grpc-gatway'*)](https://github.com/grpc-ecosystem/grpc-gateway)
 
 본문에서는 유저 등록 서비스를 gRPC를 통해 구현하고, gRPC-gateway를 이용해 간단한 RESTful 서비스를 제공하는 방법에 대해 다룬다.
