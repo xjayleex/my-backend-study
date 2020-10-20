@@ -40,20 +40,16 @@ func NewGateway(ctx context.Context, opts ...runtime.ServeMuxOption) (http.Handl
 	if cred, err := credentials.NewClientTLSFromFile(grpcServerCert,""); err == nil {
 		grpcDialOpts = append(grpcDialOpts, grpc.WithTransportCredentials(cred))
 	} else {
-		logger.Info(err)
 		return nil, err
 	}
 
-
 	err := gw.RegisterEnrollmentHandlerFromEndpoint(ctx, mux, *getEndpoint, grpcDialOpts)
 	if err != nil {
-		logger.Info(err)
 		return nil, errors.New("grpc Gateway : `GET` error")
 	}
 
 	err = gw.RegisterEnrollmentHandlerFromEndpoint(ctx, mux, *postEndpoint,grpcDialOpts)
 	if err != nil {
-		logger.Info(err)
 		return nil, errors.New("grpc Gateway : `POST error")
 	}
 
@@ -62,11 +58,11 @@ func NewGateway(ctx context.Context, opts ...runtime.ServeMuxOption) (http.Handl
 
 func swaggerHandler(w http.ResponseWriter, r *http.Request) {
 	if !strings.HasSuffix(r.URL.Path, ".swagger.json") {
-		glog.Errorf("Swagger not found: %s", r.URL.Path)
+		logger.Warnf("Swagger not found: %s", r.URL.Path)
 		http.NotFound(w, r)
 		return
 	}
-	glog.Infof("Serving %s", r.URL.Path)
+	logger.Infof("Serving %s", r.URL.Path)
 	p := strings.TrimPrefix(r.URL.Path, "/swagger/")
 	p = path.Join(*swaggerPath, p)
 	http.ServeFile(w, r, p)

@@ -197,6 +197,7 @@ func main() {
 	}
 	pb.RegisterEnrollmentServer(grpcServer.server, grpcServer)
 	reflection.Register(grpcServer.server)
+	defer grpcServer.Close()
 	if err = grpcServer.Serve(grpcAddr); err != nil {
 		grpcServer.logger.Fatalf("Failed to serve gRPC server : %v", err)
 	}

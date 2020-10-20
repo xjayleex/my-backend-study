@@ -141,6 +141,7 @@ $ protoc -I$GOPATH/src -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/thir
 
 #### gRPC Server
 ---
+gRPC Server 전체 코드는 이 곳 [`server/main.go`](https://github.com/xjayleex/my-backend-study/blob/master/grpc/grpc-gateway-with-tls/server/main.go)을 참고.
 
 gRPC 서버 구조체를 정의한다. grpc.Server에 대한 포인터와, User 정보를 저장하고 조회할 UserStore 인터페이스, 그리고 로깅을 위한 Logger 패키지를 포함한다. 로깅 패키지로는 [`logrus`](https://github.com/sirupsen/logrus)를 사용했다.
 
@@ -176,4 +177,176 @@ func NewGrpcServer(serverCrt string, serverKey string, userStore store.UserStore
 
 ```
 
-proto 파일에 정의해놓은 CheckEnrollment, Enroll 서비스를 구현한다. CheckEnrollment 서비스는 Request의 Mail와 Username로 내부 User DB를 조회한뒤, 등록 여부를 응답하는 서비스이다. Enroll 서비스는 Request에 포함된 Mail과 Username으로 User DB에 Mail을 키로해서 저장하는 서비스이다.
+proto 파일에 정의해놓은 CheckEnrollment, Enroll 서비스를 구현한다. CheckEnrollment 서비스는 Request의 Mail와 Username로 내부 User DB를 조회한뒤, 등록 여부를 응답하는 서비스이다. 
+
+
+```go
+// CheckEnrollment Service
+// which checks user enrollemnt.
+func (gs *GrpcServer) CheckEnrollment(ctx context.Context, req *pb.CheckEnrollmentRequest) (*pb.CommonResponseMsg, error) {
+	v, err := gs.userStore.Find(req.Mail)
+	if err != nil {
+		se, _ := err.(*store.StoreError)
+		if se.Code == store.ErrNoConnWithRedis {
+			gs.logger.Fatal("No Connection with redis.")
+			return nil, status.Error(codes.Internal, "Internal Error")
+		} else if se.Code == store.ErrKeyNotExists {
+			return nil, status.Error(codes.NotFound, "Mail Not Found")
+		} else {
+			// No matched StoreError here.
+		}
+	}
+
+	asserted, ok := v.(*redis.StringCmd)
+	if !ok {
+		return nil, status.Error(codes.Internal, "Marshal/Unmarshal error")
+	}
+
+	unmarshaled, err := asserted.Bytes()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Marshal/Unmarshal error")
+	}
+
+	user := &User{}
+	err = json.Unmarshal(unmarshaled, user)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Marshal/Unmarshal error")
+	}
+
+	if user.Username != req.Name {
+		return nil, status.Error(codes.NotFound, "No mathches with request")
+	}
+
+	result := &pb.CommonResponseMsg{
+		Message: req.Mail + " is verified.",
+	}
+	return result, nil
+}
+```
+[`google.golang.org/grpc/codes`](https://godoc.org/google.golang.org/grpc/codes)에는 gRPC에서 사용하는 상태 코드가 표현되어 있다. 이 코드를 이용해 gRPC-gateway가 gRPC 서버에서 에러 코드를 리턴 받았을 때, [`grpc-gateway/runtime/error.go`](https://github.com/grpc-ecosystem/grpc-gateway/blob/master/runtime/errors.go)를 통해 http 상태 코드로 변환한다. 따라서 gRPC 서버에서 에러를 핸들링할 때, 꼭 gRPC 상태 코드로 핸들링하자.
+
+Enroll 서비스 구현은 다음과 같다. Enroll 서비스는 Request에 포함된 Mail과 Username으로 User DB에 Mail을 키로해서 저장하는 서비스이다.
+
+```go
+func (gs *GrpcServer) Enroll(ctx context.Context, req *pb.EnrollmentRequest) (*pb.CommonResponseMsg, error) {
+	err := gs.userStore.Save(req.Mail, NewUser(req.Name,req.Mail))
+	if err != nil {
+		se, _ := err.(*store.StoreError)
+		if se.Code == store.ErrKeyExistsAlready {
+			return nil, status.Error(codes.AlreadyExists, "The mail is already enrolled.")
+		} else if se.Code == store.ErrNoConnWithRedis {
+			gs.logger.Fatal("No Connection with redis.")
+			return nil, status.Error(codes.Internal, "Internal Error")
+		} else {
+			return nil, status.Error(codes.Internal, "Internal Error")
+		}
+	}
+	result := &pb.CommonResponseMsg{Message: "Enrolled successfully"}
+	return result, nil
+}
+```
+
+필수적이진 않지만, 클라이언트 요청과 서버 응답을 로깅하기 위해 서버측 Unary Interceptor를 구현했다. 클라이언트 요청에 실린 Context 객체로부터 클라이언트 정보를 추출할 수 있다.
+
+```go
+func serverInterceptor (ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	p, ok := peer.FromContext(ctx)
+	if ok {
+		interceptorLogger.Infof("Request from %s",p.Addr.String())
+	}
+	h, err := handler(ctx, req)
+	// handle을 gRPC 서버로 넘기고, 받음
+
+	if ok {
+		interceptorLogger.Infof("Response to %s", p.Addr.String())
+	}
+	return h, err
+}
+```
+
+유저 데이터 모델은 위에서 살펴본 바와 같고, 앞서 언급했듯이 MarshalBinary()와 UnmarshalBinary를 구현했다. 
+
+```go
+type User struct {
+	Mail				string	`json:"mail"`
+	Username			string	`json:"name"`
+}
+
+func NewUser(username string, mail string) *User {
+	return &User {
+		Username: username,
+		Mail: mail,
+	}
+}
+
+func (u *User) MarshalBinary() ([]byte, error) {
+	return json.Marshal(u)
+}
+
+func (u *User) UnmarshalBinary(data []byte) error {
+	return json.Unmarshal(data, u)
+}
+```
+
+#### gRPC-Gateway
+---
+gRPC-Gateway 전체 코드는 [`gateway/gateway.go`](https://github.com/xjayleex/my-backend-study/blob/master/grpc/grpc-gateway-with-tls/gateway/gateway.go)을 참고.
+
+gRPC-Gateway를 사용하기 위한 기본적인 코드는 아주 간단한데, gRPC 서버를 엔드포인트로 하는 gRPC-Gateway의 멀티플렉서인 `runtime.ServeMux`를 http 멀티플렉서 핸들러로 붙여주는 것이 핵심이다. 
+첫번째 과정인 gRPC 서버 엔드포인트를 `runtime.ServeMux`에 붙여주는 역할은, gateway 스텁 코드의 `Register[ServiceName]HandlerFromEndpoint` 메서드가 수행한다.
+`runtime.ServerMux`는 `http.Handler`를 구현하고 있으므로, `http.ListenAndServe` 로 핸들러를 구동시켜주기만 하면 된다.
+
+```go
+
+func NewGateway(ctx context.Context, opts ...runtime.ServeMuxOption) (http.Handler, error) {
+	mux := runtime.NewServeMux(opts...) // + runtime.WithMarshalerOption()
+	grpcDialOpts := []grpc.DialOption{}
+
+	if cred, err := credentials.NewClientTLSFromFile(grpcServerCert,""); err == nil {
+		grpcDialOpts = append(grpcDialOpts, grpc.WithTransportCredentials(cred))
+	} else {
+		return nil, err
+	}
+
+	err := gw.RegisterEnrollmentHandlerFromEndpoint(ctx, mux, *getEndpoint, grpcDialOpts)
+	if err != nil {
+		return nil, errors.New("grpc Gateway : `GET` error")
+	}
+
+	err = gw.RegisterEnrollmentHandlerFromEndpoint(ctx, mux, *postEndpoint,grpcDialOpts)
+	if err != nil {
+		return nil, errors.New("grpc Gateway : `POST error")
+	}
+
+	return mux, nil
+}
+
+func Serve(address string, opts ...runtime.ServeMuxOption) error {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/swagger/", swaggerHandler)
+	//opts = append(opts, runtime.WithProtoErrorHandler(runtime.DefaultHTTPProtoErrorHandler))
+	gwHandler, err := NewGateway(ctx, opts...)
+	if err != nil {
+		return err
+	}
+
+	mux.Handle("/", gwHandler)
+
+	return http.ListenAndServeTLS(address, gwCert, gwKey, allowCORS(mux))
+}
+```
+
+#### Client Code
+---
+gRPC 서버에서 http 응답을 받아내는 것이 목적이었으므로, gRPC 클라이언트는 구현할 필요가 없었다. 또한 http 클라이언트는 그냥 curl을 쓰자...
+
+##### GET 요청
+
+##### POST 요청
+
+
